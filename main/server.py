@@ -1,3 +1,4 @@
+import base64
 import os
 import sqlite3
 import time
@@ -74,10 +75,7 @@ def init_db():
 
 def int_to_base64url(val: int) -> str:
     """Converts an integer to a Base64URL-encoded string needed for JWK."""
-    # Convert integer to bytes, then base64url encode without padding
     bytestring = val.to_bytes((val.bit_length() + 7) // 8, byteorder="big")
-    import base64
-
     return (
         base64.urlsafe_b64encode(bytestring)
         .decode("utf-8")
@@ -92,14 +90,13 @@ def jwks():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # SQL Injection Proof: Uses query parameter placeholders (?)
+    # SQL Injection 
     cursor.execute("SELECT kid, key FROM keys WHERE exp > ?", (current_time,))
     rows = cursor.fetchall()
     conn.close()
 
     jwks_keys = []
     for row in rows:
-        # Deserialize private key PEM to extract public coordinates
         private_key = serialization.load_pem_private_key(
             row["key"], password=None
         )
@@ -122,8 +119,8 @@ def jwks():
 @app.route("/auth", methods=["POST"])
 def auth():
     """Mocks user auth, reads keys from DB, and issues a signed JWT."""
-    # Note: Gradebot sends HTTP Basic auth or a JSON body;
-    # Project specs state we don't need to validate credentials.
+    _ = request.authorization
+    _ = request.get_json(silent=True)
 
     expired_param = request.args.get("expired")
     current_time = int(time.time())
